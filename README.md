@@ -59,6 +59,6 @@ Gotcha: `R` treats a pure-hex token as an address, so avoid program names spelle
 Requires the `msap-asm` assembler (`../8-bit_CPU_Programmer/assembler`) and node. Produces:
 - `mos.bin` - the flat ROM image (burn to the 28C64 / load into the simulator)
 - `mos.lst` - assembly listing
-- updates `../MSAP-1/simulator-msap2/src/rom/mos-rom.json` (the image the simulator boots) and the assembler repo's byte-parity test fixture
+- updates `../MSAP-2/simulator/src/rom/mos-rom.json` (the image the simulator boots) and the assembler repo's byte-parity test fixture
 
 The simulator never assembles this source - it loads the built binary, exactly as the hardware will.
