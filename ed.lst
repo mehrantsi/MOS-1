@@ -1,0 +1,904 @@
+1000   10 50     start:  lda #<TXT
+1002   14 0A 1B          sta BUFE
+1005   10 1B             lda #>TXT
+1007   14 0B 1B          sta BUFE+1
+100A   10 00             lda #0
+100C   14 25 1B          sta SYMN
+100F   10 30             lda #<m_hi
+1011   14 00 1F          sta PTR
+1014   10 19             lda #>m_hi
+1016   14 01 1F          sta PTR+1
+1019   31 16 00          jsr SYS_PUTS
+101C   17 FF     edloop: ldx #0xFF
+101E   1A                txs
+101F   10 5D             lda #93
+1021   31 10 00          jsr SYS_PUTC
+1024   10 20             lda #32
+1026   31 10 00          jsr SYS_PUTC
+1029   31 19 00          jsr SYS_GETLN
+102C   17 00             ldx #0
+102E   31 EB 17          jsr eskips
+1031   13 20 1F          lda LINEBUF,x
+1034   32 1C 10          jz edloop
+1037   2A 2E             cmp #46
+1039   32 63 10          jz command
+103C   31 73 17          jsr gethex
+103F   11 14 1B          lda EHAVE
+1042   32 88 10          jz ederr
+1045   11 12 1B          lda EVAL
+1048   14 0C 1B          sta LNUM
+104B   11 13 1B          lda EVAL+1
+104E   14 0D 1B          sta LNUM+1
+1051   31 EB 17          jsr eskips
+1054   31 6E 15          jsr delline
+1057   13 20 1F          lda LINEBUF,x
+105A   32 1C 10          jz edloop
+105D   31 D7 15          jsr insline
+1060   30 1C 10          jmp edloop
+1063   0C                inx
+1064   13 20 1F          lda LINEBUF,x
+1067   0C                inx
+1068   24 DF             and #0xDF
+106A   2A 4C             cmp #76
+106C   32 AB 10          jz cmd_l
+106F   2A 51             cmp #81
+1071   32 98 10          jz cmd_q
+1074   2A 48             cmp #72
+1076   32 9B 10          jz cmd_h
+1079   2A 53             cmp #83
+107B   32 F2 10          jz cmd_s
+107E   2A 4F             cmp #79
+1080   32 46 11          jz cmd_o
+1083   2A 41             cmp #65
+1085   32 B1 11          jz cmd_a
+1088   10 B7     ederr:  lda #<m_err
+108A   14 00 1F          sta PTR
+108D   10 19             lda #>m_err
+108F   14 01 1F          sta PTR+1
+1092   31 16 00          jsr SYS_PUTS
+1095   30 1C 10          jmp edloop
+1098   30 1C 00  cmd_q:  jmp SYS_EXIT
+109B   10 46     cmd_h:  lda #<m_help
+109D   14 00 1F          sta PTR
+10A0   10 19             lda #>m_help
+10A2   14 01 1F          sta PTR+1
+10A5   31 16 00          jsr SYS_PUTS
+10A8   30 1C 10          jmp edloop
+10AB   10 50     cmd_l:  lda #<TXT
+10AD   14 00 1B          sta EP
+10B0   10 1B             lda #>TXT
+10B2   14 01 1B          sta EP+1
+10B5   31 10 19  cl_l:   jsr cepbe
+10B8   34 EF 10          jc cl_d
+10BB   31 FF 16          jsr getnum
+10BE   11 0F 1B          lda GN+1
+10C1   31 3A 18          jsr puthex
+10C4   11 0E 1B          lda GN
+10C7   31 3A 18          jsr puthex
+10CA   10 20             lda #32
+10CC   31 10 00          jsr SYS_PUTC
+10CF   31 4A 18          jsr incep
+10D2   31 4A 18          jsr incep
+10D5   12 00 1B  cl_c:   lda (EP)
+10D8   32 E4 10          jz cl_e
+10DB   31 10 00          jsr SYS_PUTC
+10DE   31 4A 18          jsr incep
+10E1   30 D5 10          jmp cl_c
+10E4   31 4A 18  cl_e:   jsr incep
+10E7   10 0A             lda #10
+10E9   31 10 00          jsr SYS_PUTC
+10EC   30 B5 10          jmp cl_l
+10EF   30 1C 10  cl_d:   jmp edloop
+10F2   31 EB 17  cmd_s:  jsr eskips
+10F5   13 20 1F          lda LINEBUF,x
+10F8   32 88 10          jz ederr
+10FB   10 53             lda #83
+10FD   31 F8 17          jsr sendnm
+1100   11 0A 1B          lda BUFE
+1103   22 50             sub #<TXT
+1105   14 10 1B          sta CNT
+1108   11 0B 1B          lda BUFE+1
+110B   34 10 11          jc cs_nb
+110E   22 01             sub #1
+1110   22 1B     cs_nb:  sub #>TXT
+1112   14 11 1B          sta CNT+1
+1115   11 10 1B          lda CNT
+1118   41 02             out #DISK
+111A   11 11 1B          lda CNT+1
+111D   41 02             out #DISK
+111F   10 50             lda #<TXT
+1121   14 00 1B          sta EP
+1124   10 1B             lda #>TXT
+1126   14 01 1B          sta EP+1
+1129   11 10 1B          lda CNT
+112C   27 11 1B          ora CNT+1
+112F   32 40 11          jz cs_d
+1132   12 00 1B  cs_l:   lda (EP)
+1135   41 02             out #DISK
+1137   31 4A 18          jsr incep
+113A   31 F6 18          jsr deccnt
+113D   33 32 11          jnz cs_l
+1140   31 1C 18  cs_d:   jsr prok
+1143   30 1C 10          jmp edloop
+1146   31 EB 17  cmd_o:  jsr eskips
+1149   13 20 1F          lda LINEBUF,x
+114C   32 88 10          jz ederr
+114F   10 4C             lda #76
+1151   31 F8 17          jsr sendnm
+1154   31 14 18          jsr edskrd
+1157   14 10 1B          sta CNT
+115A   31 14 18          jsr edskrd
+115D   14 11 1B          sta CNT+1
+1160   2A FF             cmp #0xFF
+1162   33 7D 11          jnz co_ok
+1165   11 10 1B          lda CNT
+1168   2A FF             cmp #0xFF
+116A   33 7D 11          jnz co_ok
+116D   10 C0             lda #<m_nf
+116F   14 00 1F          sta PTR
+1172   10 19             lda #>m_nf
+1174   14 01 1F          sta PTR+1
+1177   31 16 00          jsr SYS_PUTS
+117A   30 1C 10          jmp edloop
+117D   10 50     co_ok:  lda #<TXT
+117F   14 00 1B          sta EP
+1182   10 1B             lda #>TXT
+1184   14 01 1B          sta EP+1
+1187   11 10 1B          lda CNT
+118A   27 11 1B          ora CNT+1
+118D   32 9F 11          jz co_set
+1190   31 14 18  co_l:   jsr edskrd
+1193   15 00 1B          sta (EP)
+1196   31 4A 18          jsr incep
+1199   31 F6 18          jsr deccnt
+119C   33 90 11          jnz co_l
+119F   11 00 1B  co_set: lda EP
+11A2   14 0A 1B          sta BUFE
+11A5   11 01 1B          lda EP+1
+11A8   14 0B 1B          sta BUFE+1
+11AB   31 1C 18          jsr prok
+11AE   30 1C 10          jmp edloop
+11B1   31 EB 17  cmd_a:  jsr eskips
+11B4   13 20 1F          lda LINEBUF,x
+11B7   32 88 10          jz ederr
+11BA   10 40             lda #<NAMBUF
+11BC   14 08 1B          sta ER
+11BF   10 1B             lda #>NAMBUF
+11C1   14 09 1B          sta ER+1
+11C4   13 20 1F  ca_c:   lda LINEBUF,x
+11C7   32 D9 11          jz ca_c2
+11CA   2A 20             cmp #32
+11CC   32 D9 11          jz ca_c2
+11CF   15 08 1B          sta (ER)
+11D2   31 72 18          jsr incer
+11D5   0C                inx
+11D6   30 C4 11          jmp ca_c
+11D9   10 00     ca_c2:  lda #0
+11DB   15 08 1B          sta (ER)
+11DE   14 25 1B          sta SYMN
+11E1   14 19 1B          sta PASS
+11E4   31 39 12          jsr apass
+11E7   11 15 1B          lda EPC
+11EA   14 17 1B          sta ELEN
+11ED   11 16 1B          lda EPC+1
+11F0   22 10             sub #>ABASE
+11F2   14 18 1B          sta ELEN+1
+11F5   10 01             lda #1
+11F7   14 19 1B          sta PASS
+11FA   31 39 12          jsr apass
+11FD   10 53             lda #83
+11FF   41 02             out #DISK
+1201   10 20             lda #32
+1203   41 02             out #DISK
+1205   10 40             lda #<NAMBUF
+1207   14 08 1B          sta ER
+120A   10 1B             lda #>NAMBUF
+120C   14 09 1B          sta ER+1
+120F   12 08 1B  ca_s:   lda (ER)
+1212   32 1D 12          jz ca_s2
+1215   41 02             out #DISK
+1217   31 72 18          jsr incer
+121A   30 0F 12          jmp ca_s
+121D   10 00     ca_s2:  lda #0
+121F   41 02             out #DISK
+1221   11 17 1B          lda ELEN
+1224   41 02             out #DISK
+1226   11 18 1B          lda ELEN+1
+1229   41 02             out #DISK
+122B   10 02             lda #2
+122D   14 19 1B          sta PASS
+1230   31 39 12          jsr apass
+1233   31 1C 18          jsr prok
+1236   30 1C 10          jmp edloop
+1239   10 00     apass:  lda #<ABASE
+123B   14 15 1B          sta EPC
+123E   10 10             lda #>ABASE
+1240   14 16 1B          sta EPC+1
+1243   10 50             lda #<TXT
+1245   14 00 1B          sta EP
+1248   10 1B             lda #>TXT
+124A   14 01 1B          sta EP+1
+124D   31 10 19  ap_l:   jsr cepbe
+1250   34 5C 12          jc ap_d
+1253   31 5D 12          jsr copyrec
+1256   31 88 12          jsr asmline
+1259   30 4D 12          jmp ap_l
+125C   04        ap_d:   rts
+125D   31 FF 16          jsr getnum
+1260   11 0E 1B          lda GN
+1263   14 1A 1B          sta ELN
+1266   11 0F 1B          lda GN+1
+1269   14 1B 1B          sta ELN+1
+126C   31 4A 18          jsr incep
+126F   31 4A 18          jsr incep
+1272   17 00             ldx #0
+1274   12 00 1B  cr_l:   lda (EP)
+1277   16 20 1F          sta LINEBUF,x
+127A   32 84 12          jz cr_d
+127D   31 4A 18          jsr incep
+1280   0C                inx
+1281   30 74 12          jmp cr_l
+1284   31 4A 18  cr_d:   jsr incep
+1287   04                rts
+1288   17 00             ldx #0
+128A   31 EB 17          jsr eskips
+128D   13 20 1F          lda LINEBUF,x
+1290   32 0E 13          jz al_rts
+1293   2A 3B             cmp #59
+1295   32 0E 13          jz al_rts
+1298   31 1B 17          jsr gettok
+129B   11 23 1B          lda DIG2
+129E   32 DF 12          jz al_dot
+12A1   13 20 1F          lda LINEBUF,x
+12A4   2A 3A             cmp #58
+12A6   33 CA 12          jnz al_mn
+12A9   0C                inx
+12AA   11 19 1B          lda PASS
+12AD   33 B3 12          jnz al_lb2
+12B0   31 C7 14          jsr symdef
+12B3   31 EB 17  al_lb2: jsr eskips
+12B6   13 20 1F          lda LINEBUF,x
+12B9   32 0E 13          jz al_rts
+12BC   2A 3B             cmp #59
+12BE   32 0E 13          jz al_rts
+12C1   31 1B 17          jsr gettok
+12C4   11 23 1B          lda DIG2
+12C7   32 DF 12          jz al_dot
+12CA   11 30 1B  al_mn:  lda TOK
+12CD   14 1C 1B          sta M1
+12D0   11 31 1B          lda TOK+1
+12D3   14 1D 1B          sta M2
+12D6   11 32 1B          lda TOK+2
+12D9   14 1E 1B          sta M3
+12DC   30 0F 13          jmp al_form
+12DF   13 20 1F  al_dot: lda LINEBUF,x
+12E2   2A 2E             cmp #46
+12E4   33 1D 14          jnz aerr
+12E7   0C                inx
+12E8   31 1B 17          jsr gettok
+12EB   11 30 1B          lda TOK
+12EE   2A 42             cmp #66
+12F0   33 1D 14          jnz aerr
+12F3   31 EB 17  ab_l:   jsr eskips
+12F6   31 3E 14          jsr parseval
+12F9   11 12 1B          lda EVAL
+12FC   31 A3 14          jsr emitb
+12FF   31 EB 17          jsr eskips
+1302   13 20 1F          lda LINEBUF,x
+1305   2A 2C             cmp #44
+1307   33 0E 13          jnz al_rts
+130A   0C                inx
+130B   30 F3 12          jmp ab_l
+130E   04        al_rts: rts
+130F   10 00             lda #0
+1311   14 28 1B          sta LOFLAG
+1314   31 EB 17          jsr eskips
+1317   13 20 1F          lda LINEBUF,x
+131A   32 3C 13          jz af_none
+131D   2A 3B             cmp #59
+131F   32 3C 13          jz af_none
+1322   2A 23             cmp #35
+1324   32 41 13          jz af_imm
+1327   2A 28             cmp #40
+1329   32 74 13          jz af_ind
+132C   31 3E 14          jsr parseval
+132F   13 20 1F          lda LINEBUF,x
+1332   2A 2C             cmp #44
+1334   32 7D 13          jz af_absx
+1337   10 02             lda #2
+1339   30 7F 13          jmp af_set
+133C   10 00             lda #0
+133E   30 7F 13          jmp af_set
+1341   0C        af_imm: inx
+1342   13 20 1F          lda LINEBUF,x
+1345   2A 3C             cmp #60
+1347   33 53 13          jnz afi_1
+134A   10 01             lda #1
+134C   14 28 1B          sta LOFLAG
+134F   0C                inx
+1350   30 5E 13          jmp afi_2
+1353   2A 3E     afi_1:  cmp #62
+1355   33 5E 13          jnz afi_2
+1358   10 02             lda #2
+135A   14 28 1B          sta LOFLAG
+135D   0C                inx
+135E   31 3E 14  afi_2:  jsr parseval
+1361   11 28 1B          lda LOFLAG
+1364   2A 02             cmp #2
+1366   33 6F 13          jnz afi_3
+1369   11 13 1B          lda EVAL+1
+136C   14 12 1B          sta EVAL
+136F   10 01     afi_3:  lda #1
+1371   30 7F 13          jmp af_set
+1374   0C        af_ind: inx
+1375   31 3E 14          jsr parseval
+1378   10 03             lda #3
+137A   30 7F 13          jmp af_set
+137D   10 04             lda #4
+137F   14 1F 1B  af_set: sta FORM
+1382   11 1F 00          lda TABPTR
+1385   14 08 1B          sta ER
+1388   11 20 00          lda TABPTR+1
+138B   14 09 1B          sta ER+1
+138E   12 08 1B  et_l:   lda (ER)
+1391   32 1D 14          jz aerr
+1394   14 22 1B          sta DIG
+1397   31 72 18          jsr incer
+139A   12 08 1B          lda (ER)
+139D   14 23 1B          sta DIG2
+13A0   31 72 18          jsr incer
+13A3   12 08 1B          lda (ER)
+13A6   14 24 1B          sta DIG3
+13A9   31 72 18          jsr incer
+13AC   12 08 1B          lda (ER)
+13AF   14 20 1B          sta E4
+13B2   31 72 18          jsr incer
+13B5   12 08 1B          lda (ER)
+13B8   14 21 1B          sta E5
+13BB   31 72 18          jsr incer
+13BE   11 1C 1B          lda M1
+13C1   2B 22 1B          cmp DIG
+13C4   33 8E 13          jnz et_l
+13C7   11 1D 1B          lda M2
+13CA   2B 23 1B          cmp DIG2
+13CD   33 8E 13          jnz et_l
+13D0   11 1E 1B          lda M3
+13D3   2B 24 1B          cmp DIG3
+13D6   33 8E 13          jnz et_l
+13D9   11 20 1B          lda E4
+13DC   2B 1F 1B          cmp FORM
+13DF   32 F7 13          jz al_emit
+13E2   2A 05             cmp #5
+13E4   33 8E 13          jnz et_l
+13E7   11 1F 1B          lda FORM
+13EA   2A 01             cmp #1
+13EC   32 F7 13          jz al_emit
+13EF   2A 02             cmp #2
+13F1   32 F7 13          jz al_emit
+13F4   30 8E 13          jmp et_l
+13F7   11 21 1B          lda E5
+13FA   31 A3 14          jsr emitb
+13FD   11 20 1B          lda E4
+1400   32 1C 14          jz al_r2
+1403   11 12 1B          lda EVAL
+1406   31 A3 14          jsr emitb
+1409   11 20 1B          lda E4
+140C   2A 01             cmp #1
+140E   32 1C 14          jz al_r2
+1411   2A 05             cmp #5
+1413   32 1C 14          jz al_r2
+1416   11 13 1B          lda EVAL+1
+1419   31 A3 14          jsr emitb
+141C   04        al_r2:  rts
+141D   10 BA     aerr:   lda #<m_aerr
+141F   14 00 1F          sta PTR
+1422   10 19             lda #>m_aerr
+1424   14 01 1F          sta PTR+1
+1427   31 16 00          jsr SYS_PUTS
+142A   11 1B 1B          lda ELN+1
+142D   31 3A 18          jsr puthex
+1430   11 1A 1B          lda ELN
+1433   31 3A 18          jsr puthex
+1436   10 0A             lda #10
+1438   31 10 00          jsr SYS_PUTC
+143B   30 1C 10          jmp edloop
+143E   31 1B 17          jsr gettok
+1441   11 23 1B          lda DIG2
+1444   32 94 14          jz pv_bad2
+1447   31 11 15          jsr symfind
+144A   11 27 1B          lda FOUND
+144D   33 92 14          jnz pv_ok
+1450   10 00             lda #0
+1452   14 12 1B          sta EVAL
+1455   14 13 1B          sta EVAL+1
+1458   14 14 1B          sta EHAVE
+145B   08                phx
+145C   17 00             ldx #0
+145E   2C 06     pv_l:   cpx #6
+1460   32 8B 14          jz pv_d
+1463   13 30 1B          lda TOK,x
+1466   2A 20             cmp #32
+1468   32 8B 14          jz pv_d
+146B   31 CC 17          jsr hexval
+146E   2A FF             cmp #0xFF
+1470   32 93 14          jz pv_bad
+1473   14 22 1B          sta DIG
+1476   31 A2 17          jsr eshl4
+1479   11 12 1B          lda EVAL
+147C   27 22 1B          ora DIG
+147F   14 12 1B          sta EVAL
+1482   10 01             lda #1
+1484   14 14 1B          sta EHAVE
+1487   0C                inx
+1488   30 5E 14          jmp pv_l
+148B   09        pv_d:   plx
+148C   11 14 1B          lda EHAVE
+148F   32 94 14          jz pv_bad2
+1492   04        pv_ok:  rts
+1493   09        pv_bad: plx
+1494   11 19 1B          lda PASS
+1497   33 1D 14          jnz aerr
+149A   10 00             lda #0
+149C   14 12 1B          sta EVAL
+149F   14 13 1B          sta EVAL+1
+14A2   04                rts
+14A3   14 22 1B  emitb:  sta DIG
+14A6   11 19 1B          lda PASS
+14A9   2A 02             cmp #2
+14AB   33 B3 14          jnz eb_c
+14AE   11 22 1B          lda DIG
+14B1   41 02             out #DISK
+14B3   11 15 1B  eb_c:   lda EPC
+14B6   20 01             add #1
+14B8   14 15 1B          sta EPC
+14BB   35 C6 14          jnc eb_d
+14BE   11 16 1B          lda EPC+1
+14C1   20 01             add #1
+14C3   14 16 1B          sta EPC+1
+14C6   04        eb_d:   rts
+14C7   31 11 15  symdef: jsr symfind
+14CA   11 27 1B          lda FOUND
+14CD   33 1D 14          jnz aerr
+14D0   11 25 1B          lda SYMN
+14D3   2A 1C             cmp #28
+14D5   34 1D 14          jc aerr
+14D8   11 25 1B          lda SYMN
+14DB   0E                shl
+14DC   0E                shl
+14DD   0E                shl
+14DE   14 08 1B          sta ER
+14E1   10 1E             lda #>SYMTAB
+14E3   14 09 1B          sta ER+1
+14E6   08                phx
+14E7   17 00             ldx #0
+14E9   13 30 1B  sd_l:   lda TOK,x
+14EC   15 08 1B          sta (ER)
+14EF   31 72 18          jsr incer
+14F2   0C                inx
+14F3   2C 06             cpx #6
+14F5   33 E9 14          jnz sd_l
+14F8   09                plx
+14F9   11 15 1B          lda EPC
+14FC   15 08 1B          sta (ER)
+14FF   31 72 18          jsr incer
+1502   11 16 1B          lda EPC+1
+1505   15 08 1B          sta (ER)
+1508   11 25 1B          lda SYMN
+150B   20 01             add #1
+150D   14 25 1B          sta SYMN
+1510   04                rts
+1511   10 00             lda #0
+1513   14 27 1B          sta FOUND
+1516   14 26 1B          sta SI
+1519   11 26 1B  sf_l:   lda SI
+151C   2B 25 1B          cmp SYMN
+151F   34 6D 15          jc sf_no
+1522   11 26 1B          lda SI
+1525   0E                shl
+1526   0E                shl
+1527   0E                shl
+1528   14 08 1B          sta ER
+152B   10 1E             lda #>SYMTAB
+152D   14 09 1B          sta ER+1
+1530   08                phx
+1531   17 00             ldx #0
+1533   13 30 1B  sf_c:   lda TOK,x
+1536   14 22 1B          sta DIG
+1539   12 08 1B          lda (ER)
+153C   2B 22 1B          cmp DIG
+153F   33 61 15          jnz sf_nx
+1542   31 72 18          jsr incer
+1545   0C                inx
+1546   2C 06             cpx #6
+1548   33 33 15          jnz sf_c
+154B   12 08 1B          lda (ER)
+154E   14 12 1B          sta EVAL
+1551   31 72 18          jsr incer
+1554   12 08 1B          lda (ER)
+1557   14 13 1B          sta EVAL+1
+155A   10 01             lda #1
+155C   14 27 1B          sta FOUND
+155F   09                plx
+1560   04                rts
+1561   09        sf_nx:  plx
+1562   11 26 1B          lda SI
+1565   20 01             add #1
+1567   14 26 1B          sta SI
+156A   30 19 15          jmp sf_l
+156D   04        sf_no:  rts
+156E   10 50             lda #<TXT
+1570   14 00 1B          sta EP
+1573   10 1B             lda #>TXT
+1575   14 01 1B          sta EP+1
+1578   31 10 19  dl_l:   jsr cepbe
+157B   34 D6 15          jc dl_d
+157E   31 FF 16          jsr getnum
+1581   11 0E 1B          lda GN
+1584   2B 0C 1B          cmp LNUM
+1587   33 CD 15          jnz dl_nx
+158A   11 0F 1B          lda GN+1
+158D   2B 0D 1B          cmp LNUM+1
+1590   33 CD 15          jnz dl_nx
+1593   31 D0 16          jsr rlen
+1596   14 24 1B          sta DIG3
+1599   11 00 1B          lda EP
+159C   14 02 1B          sta EQ
+159F   11 01 1B          lda EP+1
+15A2   14 03 1B          sta EQ+1
+15A5   11 24 1B          lda DIG3
+15A8   31 C6 18          jsr adeqa
+15AB   31 20 19  dl_cp:  jsr ceqbe
+15AE   34 C0 15          jc dl_fx
+15B1   12 02 1B          lda (EQ)
+15B4   15 00 1B          sta (EP)
+15B7   31 4A 18          jsr incep
+15BA   31 5E 18          jsr inceq
+15BD   30 AB 15          jmp dl_cp
+15C0   11 00 1B  dl_fx:  lda EP
+15C3   14 0A 1B          sta BUFE
+15C6   11 01 1B          lda EP+1
+15C9   14 0B 1B          sta BUFE+1
+15CC   04                rts
+15CD   31 D0 16  dl_nx:  jsr rlen
+15D0   31 AE 18          jsr adepa
+15D3   30 78 15          jmp dl_l
+15D6   04        dl_d:   rts
+15D7   19 29 1B          stx TSAVE
+15DA   10 03             lda #3
+15DC   14 24 1B          sta DIG3
+15DF   13 20 1F  il_c:   lda LINEBUF,x
+15E2   32 F1 15          jz il_c2
+15E5   0C                inx
+15E6   11 24 1B          lda DIG3
+15E9   20 01             add #1
+15EB   14 24 1B          sta DIG3
+15EE   30 DF 15          jmp il_c
+15F1   11 0A 1B  il_c2:  lda BUFE
+15F4   21 24 1B          add DIG3
+15F7   14 02 1B          sta EQ
+15FA   11 0B 1B          lda BUFE+1
+15FD   35 02 16          jnc il_n1
+1600   20 01             add #1
+1602   14 03 1B  il_n1:  sta EQ+1
+1605   2A 1E             cmp #TXTTOPH
+1607   34 C0 16          jc il_full
+160A   10 50             lda #<TXT
+160C   14 00 1B          sta EP
+160F   10 1B             lda #>TXT
+1611   14 01 1B          sta EP+1
+1614   31 10 19  il_f:   jsr cepbe
+1617   34 3B 16          jc il_at
+161A   31 FF 16          jsr getnum
+161D   11 0F 1B          lda GN+1
+1620   2B 0D 1B          cmp LNUM+1
+1623   33 2C 16          jnz il_cm
+1626   11 0E 1B          lda GN
+1629   2B 0C 1B          cmp LNUM
+162C   35 32 16  il_cm:  jnc il_nx
+162F   30 3B 16          jmp il_at
+1632   31 D0 16  il_nx:  jsr rlen
+1635   31 AE 18          jsr adepa
+1638   30 14 16          jmp il_f
+163B   11 0A 1B  il_at:  lda BUFE
+163E   23 00 1B          sub EP
+1641   14 10 1B          sta CNT
+1644   11 0B 1B          lda BUFE+1
+1647   34 4C 16          jc il_n2
+164A   22 01             sub #1
+164C   23 01 1B  il_n2:  sub EP+1
+164F   14 11 1B          sta CNT+1
+1652   11 10 1B          lda CNT
+1655   27 11 1B          ora CNT+1
+1658   32 8E 16          jz il_wr
+165B   11 0A 1B          lda BUFE
+165E   14 04 1B          sta ES
+1661   11 0B 1B          lda BUFE+1
+1664   14 05 1B          sta ES+1
+1667   31 86 18          jsr deces
+166A   11 04 1B          lda ES
+166D   14 06 1B          sta EDD
+1670   11 05 1B          lda ES+1
+1673   14 07 1B          sta EDD+1
+1676   11 24 1B          lda DIG3
+1679   31 DE 18          jsr addda
+167C   12 04 1B  il_mv:  lda (ES)
+167F   15 06 1B          sta (EDD)
+1682   31 86 18          jsr deces
+1685   31 9A 18          jsr decedd
+1688   31 F6 18          jsr deccnt
+168B   33 7C 16          jnz il_mv
+168E   11 0C 1B  il_wr:  lda LNUM
+1691   15 00 1B          sta (EP)
+1694   31 4A 18          jsr incep
+1697   11 0D 1B          lda LNUM+1
+169A   15 00 1B          sta (EP)
+169D   31 4A 18          jsr incep
+16A0   18 29 1B          ldx TSAVE
+16A3   13 20 1F  il_w2:  lda LINEBUF,x
+16A6   15 00 1B          sta (EP)
+16A9   32 B3 16          jz il_w3
+16AC   31 4A 18          jsr incep
+16AF   0C                inx
+16B0   30 A3 16          jmp il_w2
+16B3   11 02 1B  il_w3:  lda EQ
+16B6   14 0A 1B          sta BUFE
+16B9   11 03 1B          lda EQ+1
+16BC   14 0B 1B          sta BUFE+1
+16BF   04                rts
+16C0   10 CF             lda #<m_full
+16C2   14 00 1F          sta PTR
+16C5   10 19             lda #>m_full
+16C7   14 01 1F          sta PTR+1
+16CA   31 16 00          jsr SYS_PUTS
+16CD   30 1C 10          jmp edloop
+16D0   11 00 1B  rlen:   lda EP
+16D3   14 08 1B          sta ER
+16D6   11 01 1B          lda EP+1
+16D9   14 09 1B          sta ER+1
+16DC   31 72 18          jsr incer
+16DF   31 72 18          jsr incer
+16E2   10 03             lda #3
+16E4   14 23 1B          sta DIG2
+16E7   12 08 1B  rl_l:   lda (ER)
+16EA   32 FB 16          jz rl_d
+16ED   31 72 18          jsr incer
+16F0   11 23 1B          lda DIG2
+16F3   20 01             add #1
+16F5   14 23 1B          sta DIG2
+16F8   30 E7 16          jmp rl_l
+16FB   11 23 1B  rl_d:   lda DIG2
+16FE   04                rts
+16FF   11 00 1B  getnum: lda EP
+1702   14 08 1B          sta ER
+1705   11 01 1B          lda EP+1
+1708   14 09 1B          sta ER+1
+170B   12 08 1B          lda (ER)
+170E   14 0E 1B          sta GN
+1711   31 72 18          jsr incer
+1714   12 08 1B          lda (ER)
+1717   14 0F 1B          sta GN+1
+171A   04                rts
+171B   10 20     gettok: lda #32
+171D   14 30 1B          sta TOK
+1720   14 31 1B          sta TOK+1
+1723   14 32 1B          sta TOK+2
+1726   14 33 1B          sta TOK+3
+1729   14 34 1B          sta TOK+4
+172C   14 35 1B          sta TOK+5
+172F   10 00             lda #0
+1731   14 23 1B          sta DIG2
+1734   13 20 1F  gt_l:   lda LINEBUF,x
+1737   32 72 17          jz gt_d
+173A   2A 30             cmp #48
+173C   35 72 17          jnc gt_d
+173F   2A 3A             cmp #58
+1741   35 50 17          jnc gt_k
+1744   24 DF             and #0xDF
+1746   2A 41             cmp #65
+1748   35 72 17          jnc gt_d
+174B   2A 5B             cmp #91
+174D   34 72 17          jc gt_d
+1750   14 22 1B  gt_k:   sta DIG
+1753   11 23 1B          lda DIG2
+1756   2A 06             cmp #6
+1758   34 66 17          jc gt_sk
+175B   08                phx
+175C   18 23 1B          ldx DIG2
+175F   11 22 1B          lda DIG
+1762   16 30 1B          sta TOK,x
+1765   09                plx
+1766   11 23 1B  gt_sk:  lda DIG2
+1769   20 01             add #1
+176B   14 23 1B          sta DIG2
+176E   0C                inx
+176F   30 34 17          jmp gt_l
+1772   04        gt_d:   rts
+1773   10 00     gethex: lda #0
+1775   14 12 1B          sta EVAL
+1778   14 13 1B          sta EVAL+1
+177B   14 14 1B          sta EHAVE
+177E   13 20 1F  gh_l:   lda LINEBUF,x
+1781   31 CC 17          jsr hexval
+1784   2A FF             cmp #0xFF
+1786   32 A1 17          jz gh_d
+1789   14 22 1B          sta DIG
+178C   31 A2 17          jsr eshl4
+178F   11 12 1B          lda EVAL
+1792   27 22 1B          ora DIG
+1795   14 12 1B          sta EVAL
+1798   10 01             lda #1
+179A   14 14 1B          sta EHAVE
+179D   0C                inx
+179E   30 7E 17          jmp gh_l
+17A1   04        gh_d:   rts
+17A2   10 04     eshl4:  lda #4
+17A4   14 26 1B          sta SI
+17A7   11 13 1B  es_l:   lda EVAL+1
+17AA   0E                shl
+17AB   14 13 1B          sta EVAL+1
+17AE   11 12 1B          lda EVAL
+17B1   0E                shl
+17B2   14 12 1B          sta EVAL
+17B5   35 C0 17          jnc es_n
+17B8   11 13 1B          lda EVAL+1
+17BB   26 01             ora #1
+17BD   14 13 1B          sta EVAL+1
+17C0   11 26 1B  es_n:   lda SI
+17C3   22 01             sub #1
+17C5   14 26 1B          sta SI
+17C8   33 A7 17          jnz es_l
+17CB   04                rts
+17CC   2A 30     hexval: cmp #48
+17CE   35 E8 17          jnc hv_bad
+17D1   2A 3A             cmp #58
+17D3   35 E5 17          jnc hv_dig
+17D6   24 DF             and #0xDF
+17D8   2A 41             cmp #65
+17DA   35 E8 17          jnc hv_bad
+17DD   2A 47             cmp #71
+17DF   34 E8 17          jc hv_bad
+17E2   22 37             sub #55
+17E4   04                rts
+17E5   22 30     hv_dig: sub #48
+17E7   04                rts
+17E8   10 FF     hv_bad: lda #0xFF
+17EA   04                rts
+17EB   13 20 1F  eskips: lda LINEBUF,x
+17EE   2A 20             cmp #32
+17F0   33 F7 17          jnz esk_d
+17F3   0C                inx
+17F4   30 EB 17          jmp eskips
+17F7   04        esk_d:  rts
+17F8   41 02     sendnm: out #DISK
+17FA   10 20             lda #32
+17FC   41 02             out #DISK
+17FE   13 20 1F  sn_l:   lda LINEBUF,x
+1801   32 0F 18          jz sn_d
+1804   2A 20             cmp #32
+1806   32 0F 18          jz sn_d
+1809   41 02             out #DISK
+180B   0C                inx
+180C   30 FE 17          jmp sn_l
+180F   10 00     sn_d:   lda #0
+1811   41 02             out #DISK
+1813   04                rts
+1814   40 05     edskrd: in #DSKST
+1816   32 14 18          jz edskrd
+1819   40 02             in #DISK
+181B   04                rts
+181C   10 CB     prok:   lda #<m_ok
+181E   14 00 1F          sta PTR
+1821   10 19             lda #>m_ok
+1823   14 01 1F          sta PTR+1
+1826   30 16 00          jmp SYS_PUTS
+1829   24 0F             and #0x0F
+182B   2A 0A             cmp #10
+182D   34 35 18          jc phn_a
+1830   20 30             add #48
+1832   30 10 00          jmp SYS_PUTC
+1835   20 37     phn_a:  add #55
+1837   30 10 00          jmp SYS_PUTC
+183A   14 2A 1B  puthex: sta EHX
+183D   0F                shr
+183E   0F                shr
+183F   0F                shr
+1840   0F                shr
+1841   31 29 18          jsr puthexn
+1844   11 2A 1B          lda EHX
+1847   30 29 18          jmp puthexn
+184A   11 00 1B  incep:  lda EP
+184D   20 01             add #1
+184F   14 00 1B          sta EP
+1852   35 5D 18          jnc iep_d
+1855   11 01 1B          lda EP+1
+1858   20 01             add #1
+185A   14 01 1B          sta EP+1
+185D   04        iep_d:  rts
+185E   11 02 1B  inceq:  lda EQ
+1861   20 01             add #1
+1863   14 02 1B          sta EQ
+1866   35 71 18          jnc iq_d
+1869   11 03 1B          lda EQ+1
+186C   20 01             add #1
+186E   14 03 1B          sta EQ+1
+1871   04        iq_d:   rts
+1872   11 08 1B  incer:  lda ER
+1875   20 01             add #1
+1877   14 08 1B          sta ER
+187A   35 85 18          jnc ir_d
+187D   11 09 1B          lda ER+1
+1880   20 01             add #1
+1882   14 09 1B          sta ER+1
+1885   04        ir_d:   rts
+1886   11 04 1B  deces:  lda ES
+1889   22 01             sub #1
+188B   14 04 1B          sta ES
+188E   34 99 18          jc des_d
+1891   11 05 1B          lda ES+1
+1894   22 01             sub #1
+1896   14 05 1B          sta ES+1
+1899   04        des_d:  rts
+189A   11 06 1B  decedd: lda EDD
+189D   22 01             sub #1
+189F   14 06 1B          sta EDD
+18A2   34 AD 18          jc ded_d
+18A5   11 07 1B          lda EDD+1
+18A8   22 01             sub #1
+18AA   14 07 1B          sta EDD+1
+18AD   04        ded_d:  rts
+18AE   14 22 1B  adepa:  sta DIG
+18B1   11 00 1B          lda EP
+18B4   21 22 1B          add DIG
+18B7   14 00 1B          sta EP
+18BA   35 C5 18          jnc aep_d
+18BD   11 01 1B          lda EP+1
+18C0   20 01             add #1
+18C2   14 01 1B          sta EP+1
+18C5   04        aep_d:  rts
+18C6   14 22 1B  adeqa:  sta DIG
+18C9   11 02 1B          lda EQ
+18CC   21 22 1B          add DIG
+18CF   14 02 1B          sta EQ
+18D2   35 DD 18          jnc aq_d
+18D5   11 03 1B          lda EQ+1
+18D8   20 01             add #1
+18DA   14 03 1B          sta EQ+1
+18DD   04        aq_d:   rts
+18DE   14 22 1B  addda:  sta DIG
+18E1   11 06 1B          lda EDD
+18E4   21 22 1B          add DIG
+18E7   14 06 1B          sta EDD
+18EA   35 F5 18          jnc ad_d
+18ED   11 07 1B          lda EDD+1
+18F0   20 01             add #1
+18F2   14 07 1B          sta EDD+1
+18F5   04        ad_d:   rts
+18F6   11 10 1B  deccnt: lda CNT
+18F9   22 01             sub #1
+18FB   14 10 1B          sta CNT
+18FE   34 09 19          jc dc_ok
+1901   11 11 1B          lda CNT+1
+1904   22 01             sub #1
+1906   14 11 1B          sta CNT+1
+1909   11 10 1B  dc_ok:  lda CNT
+190C   27 11 1B          ora CNT+1
+190F   04                rts
+1910   11 01 1B  cepbe:  lda EP+1
+1913   2B 0B 1B          cmp BUFE+1
+1916   33 1F 19          jnz cpb_d
+1919   11 00 1B          lda EP
+191C   2B 0A 1B          cmp BUFE
+191F   04        cpb_d:  rts
+1920   11 03 1B  ceqbe:  lda EQ+1
+1923   2B 0B 1B          cmp BUFE+1
+1926   33 2F 19          jnz cqb_d
+1929   11 02 1B          lda EQ
+192C   2B 0A 1B          cmp BUFE
+192F   04        cqb_d:  rts
+1930   45 44 20 31 2E 30 20 2D 20 2E 48 20 46 4F 52 20 48 45 4C 50 0A 00 m_hi:   .asciiz "ED 1.0 - .H FOR HELP\n"
+1946   4E 4E 20 54 45 58 54 20 41 44 44 53 20 4C 49 4E 45 2C 20 42 41 52 45 20 4E 4E 20 44 45 4C 45 54 45 53 0A 2E 4C 20 4C 49 53 54 20 2E 41 20 4E 41 4D 45 20 41 53 4D 20 2E 53 2F 2E 4F 20 4E 41 4D 45 20 53 52 43 20 2E 51 20 51 55 49 54 0A 4C 41 42 45 4C 53 20 4E 41 4D 45 3A 20 4F 50 45 52 41 4E 44 53 20 48 45 58 20 23 3C 4C 20 23 3E 4C 0A 00 m_help: .asciiz "NN TEXT ADDS LINE, BARE NN DELETES\n.L LIST .A NAME ASM .S/.O NAME SRC .Q QUIT\nLABELS NAME: OPERANDS HEX #<L #>L\n"
+19B7   3F 0A 00  m_err:  .asciiz "?\n"
+19BA   45 52 52 20 40 00 m_aerr: .asciiz "ERR @"
+19C0   4E 4F 54 20 46 4F 55 4E 44 0A 00 m_nf:   .asciiz "NOT FOUND\n"
+19CB   4F 4B 0A 00 m_ok:   .asciiz "OK\n"
+19CF   46 55 4C 4C 0A 00 m_full: .asciiz "FULL\n"
