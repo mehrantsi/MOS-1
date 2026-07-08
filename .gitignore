@@ -1,4 +1,2 @@
-mos.bin
-mos.lst
-ed.bin
-ed.lsts
+*.bin
+*.lst
