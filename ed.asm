@@ -1,7 +1,5 @@
 ; ED 1.0 - line editor + two-pass assembler for MSAP-2, runs under MOS
 ; load with R ED; text buffer 0x1790-0x1DFF; symbol table 0x1E00+
-.equ CONS, 0
-.equ CONSTAT, 1
 .equ DISK, 2
 .equ DSKST, 5
 

@@ -22,6 +22,7 @@ The monitor operating system for MSAP-2, written in MSAP-2 assembly. It boots fr
 ## Contracts
 
 - **Syscall jump table** (stable, link against these): PUTC `0x010`, GETC `0x013`, PUTS `0x016` (pointer at `0x1F00/01`), GETLN `0x019` (line at `0x1F20`), EXIT `0x01C`.
+- **Serial console**: a TL16C550D occupies ports `8` through `15`. On cold start MOS sets DLAB, writes divisor `0x000C` for the 1.8432 MHz reference, selects 8 data bits/no parity/1 stop bit, clears the FIFOs, and then uses port `8` for data and port `13` for line status. Status bit 0 means receive data ready and bit 5 means transmit holding register empty.
 - **Interrupts**: the ROM IRQ vector at `0x008` is `jmp (0x1F1A)` - hook interrupts by writing your handler address to RAM at `0x1F1A/1B`. The monitor resets it to a default `RTI` at every prompt.
 - **Memory**: ROM `0x0000-0x0FFF`, user RAM `0x1000-0x1EFF`, system page `0x1F00-0x1FFF` (monitor variables, buffers, run trampoline at `0x1F90`, stack from `0x1FFF` down).
 - The monitor never writes to ROM addresses: `R` runs programs through a RAM trampoline, and interrupt hooks go through the RAM vector - so the same image works from a real write-protected EEPROM.
@@ -57,7 +58,7 @@ Gotcha: `R` treats a pure-hex token as an address, so avoid program names spelle
 ```
 
 Requires the `msap-asm` assembler (`../8-bit_CPU_Programmer/assembler`) and node. Produces:
-- `mos.bin` - the flat ROM image (burn to the 28C64 / load into the simulator)
+- `mos.bin` - the flat 4 KB ROM image (burn to the modular AT28C64B or pad with `0xFF` for production U36 / load into the simulator)
 - `mos.lst` - assembly listing
 - updates `../MSAP-2/simulator/src/rom/mos-rom.json` (the image the simulator boots) and the assembler repo's byte-parity test fixture
 

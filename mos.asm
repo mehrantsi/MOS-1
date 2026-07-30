@@ -1,6 +1,9 @@
 ; MOS 1.1 - the MSAP-2 monitor operating system
-.equ CONS, 0
-.equ CONSTAT, 1
+.equ CONS, 8
+.equ CONIER, 9
+.equ CONFCR, 10
+.equ CONLCR, 11
+.equ CONSTAT, 13
 .equ DISK, 2
 .equ DSKST, 5
 
@@ -49,7 +52,19 @@
         jmp mainloop
         .word asmtab
 
-main:   lda #<banner
+main:   lda #0x80
+        out #CONLCR
+        lda #0x0C
+        out #CONS
+        lda #0
+        out #CONIER
+        lda #0x03
+        out #CONLCR
+        lda #0x07
+        out #CONFCR
+        lda #0
+        out #CONIER
+        lda #<banner
         sta PTR
         lda #>banner
         sta PTR+1
@@ -100,7 +115,7 @@ mainloop:
 
 putc:   sta PUTCT
 putc_w: in #CONSTAT
-        and #2
+        and #0x20
         jz putc_w
         lda PUTCT
         out #CONS
