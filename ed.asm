@@ -1,5 +1,5 @@
 ; ED 1.0 - line editor + two-pass assembler for MSAP-2, runs under MOS
-; load with R ED; text buffer 0x1790-0x1DFF; symbol table 0x1E00+
+; load with R EDIT; text buffer 0x3B50-0x3DFF; symbol table 0x3E00+
 .equ DISK, 2
 .equ DSKST, 5
 
@@ -8,49 +8,49 @@
 .equ SYS_PUTS, 0x016
 .equ SYS_GETLN, 0x019
 .equ SYS_EXIT, 0x01C
-.equ PTR, 0x1F00
-.equ LINEBUF, 0x1F20
+.equ PTR, 0x3F00
+.equ LINEBUF, 0x3F20
 
 .equ TABPTR, 0x01F
 
-.equ EP, 0x1B00
-.equ EQ, 0x1B02
-.equ ES, 0x1B04
-.equ EDD, 0x1B06
-.equ ER, 0x1B08
-.equ BUFE, 0x1B0A
-.equ LNUM, 0x1B0C
-.equ GN, 0x1B0E
-.equ CNT, 0x1B10
-.equ EVAL, 0x1B12
-.equ EHAVE, 0x1B14
-.equ EPC, 0x1B15
-.equ ELEN, 0x1B17
-.equ PASS, 0x1B19
-.equ ELN, 0x1B1A
-.equ M1, 0x1B1C
-.equ M2, 0x1B1D
-.equ M3, 0x1B1E
-.equ FORM, 0x1B1F
-.equ E4, 0x1B20
-.equ E5, 0x1B21
-.equ DIG, 0x1B22
-.equ DIG2, 0x1B23
-.equ DIG3, 0x1B24
-.equ SYMN, 0x1B25
-.equ SI, 0x1B26
-.equ FOUND, 0x1B27
-.equ LOFLAG, 0x1B28
-.equ TSAVE, 0x1B29
-.equ EHX, 0x1B2A
-.equ TOK, 0x1B30
-.equ NAMBUF, 0x1B40
-.equ TXT, 0x1B50
-.equ TXTTOPH, 0x1E
-.equ SYMTAB, 0x1E00
-.equ ABASE, 0x1000
+.equ EP, 0x3B00
+.equ EQ, 0x3B02
+.equ ES, 0x3B04
+.equ EDD, 0x3B06
+.equ ER, 0x3B08
+.equ BUFE, 0x3B0A
+.equ LNUM, 0x3B0C
+.equ GN, 0x3B0E
+.equ CNT, 0x3B10
+.equ EVAL, 0x3B12
+.equ EHAVE, 0x3B14
+.equ EPC, 0x3B15
+.equ ELEN, 0x3B17
+.equ PASS, 0x3B19
+.equ ELN, 0x3B1A
+.equ M1, 0x3B1C
+.equ M2, 0x3B1D
+.equ M3, 0x3B1E
+.equ FORM, 0x3B1F
+.equ E4, 0x3B20
+.equ E5, 0x3B21
+.equ DIG, 0x3B22
+.equ DIG2, 0x3B23
+.equ DIG3, 0x3B24
+.equ SYMN, 0x3B25
+.equ SI, 0x3B26
+.equ FOUND, 0x3B27
+.equ LOFLAG, 0x3B28
+.equ TSAVE, 0x3B29
+.equ EHX, 0x3B2A
+.equ TOK, 0x3B30
+.equ NAMBUF, 0x3B40
+.equ TXT, 0x3B50
+.equ TXTTOPH, 0x3E
+.equ SYMTAB, 0x3E00
+.equ ABASE, 0x2000
 
-.org 0x1000
+.org 0x2000
 start:  lda #<TXT
         sta BUFE
         lda #>TXT
@@ -177,7 +177,7 @@ cs_l:   lda (EP)
         jsr incep
         jsr deccnt
         jnz cs_l
-cs_d:   jsr prok
+cs_d:   jsr saveack
         jmp edloop
 
 cmd_o:  jsr eskips
@@ -269,7 +269,7 @@ ca_s2:  lda #0
         lda #2
         sta PASS
         jsr apass
-        jsr prok
+        jsr saveack
         jmp edloop
 
 apass:  lda #<ABASE
@@ -880,6 +880,16 @@ edskrd: in #DSKST
         in #DISK
         rts
 
+saveack:
+        jsr edskrd
+        cmp #1
+        jz prok
+        lda #<m_save_fail
+        sta PTR
+        lda #>m_save_fail
+        sta PTR+1
+        jmp SYS_PUTS
+
 prok:   lda #<m_ok
         sta PTR
         lda #>m_ok
@@ -1010,4 +1020,5 @@ m_err:  .asciiz "?\n"
 m_aerr: .asciiz "ERR @"
 m_nf:   .asciiz "NOT FOUND\n"
 m_ok:   .asciiz "OK\n"
+m_save_fail: .asciiz "SAVE FAILED\n"
 m_full: .asciiz "FULL\n"

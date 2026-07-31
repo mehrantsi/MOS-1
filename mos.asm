@@ -7,35 +7,38 @@
 .equ DISK, 2
 .equ DSKST, 5
 
-.equ PTR, 0x1F00
-.equ VAL, 0x1F02
-.equ LEN, 0x1F04
-.equ TMP, 0x1F06
-.equ HAVE, 0x1F07
-.equ DIGIT, 0x1F08
-.equ ROWS, 0x1F09
-.equ COLS, 0x1F0A
-.equ SRC, 0x1F0B
-.equ APTR, 0x1F0D
-.equ M1, 0x1F0F
-.equ M2, 0x1F10
-.equ M3, 0x1F11
-.equ FORM, 0x1F12
-.equ E1, 0x1F13
-.equ E2, 0x1F14
-.equ E3, 0x1F15
-.equ E4, 0x1F16
-.equ E5, 0x1F17
-.equ AREG, 0x1F18
-.equ XREG, 0x1F19
-.equ PUTCT, 0x1F1C
-.equ IRQVEC, 0x1F1A
-.equ TRAMP, 0x1EF0
-.equ LINEBUF, 0x1F20
-.equ DISKBUF, 0x1F60
-.equ USER, 0x1000
+.equ PTR, 0x3F00
+.equ VAL, 0x3F02
+.equ LEN, 0x3F04
+.equ TMP, 0x3F06
+.equ HAVE, 0x3F07
+.equ DIGIT, 0x3F08
+.equ ROWS, 0x3F09
+.equ COLS, 0x3F0A
+.equ SRC, 0x3F0B
+.equ APTR, 0x3F0D
+.equ M1, 0x3F0F
+.equ M2, 0x3F10
+.equ M3, 0x3F11
+.equ FORM, 0x3F12
+.equ E1, 0x3F13
+.equ E2, 0x3F14
+.equ E3, 0x3F15
+.equ E4, 0x3F16
+.equ E5, 0x3F17
+.equ AREG, 0x3F18
+.equ XREG, 0x3F19
+.equ PUTCT, 0x3F1C
+.equ IRQVEC, 0x3F1A
+.equ TRAMP, 0x3EF0
+.equ LINEBUF, 0x3F20
+.equ DISKBUF, 0x3F60
+.equ USER, 0x2000
 
 .org 0x000
+        jmp main
+
+.org 0x003
         jmp main
 
 .org 0x008
@@ -335,12 +338,17 @@ r_name: ldx TMP
         jsr loadf
         lda HAVE
         jz l_nf
+        cmp #1
+        jnz l_range
         jmp r_go
 r_user: lda #<USER
         sta VAL
         lda #>USER
         sta VAL+1
-r_go:   lda #0x31
+r_go:   lda VAL+1
+        cmp #0x40
+        jc l_range
+        lda #0x31
         sta TRAMP
         lda VAL
         sta TRAMP+1
@@ -470,11 +478,43 @@ lf_have:
         jsr dskrd
         sta LEN+1
         cmp #0xFF
-        jnz lf_read
+        jnz lf_check
         lda LEN
         cmp #0xFF
-        jnz lf_read
+        jnz lf_check
         lda #0
+        sta HAVE
+        rts
+lf_check:
+        lda PTR+1
+        cmp #>USER
+        jnc lf_range_ret
+        cmp #>TRAMP
+        jnc lf_capacity
+        jnz lf_range_ret
+        lda PTR
+        cmp #<TRAMP
+        jc lf_range_ret
+lf_capacity:
+        lda #<TRAMP
+        sub PTR
+        sta SRC
+        lda #>TRAMP
+        jc lf_capacity_high
+        sub #1
+lf_capacity_high:
+        sub PTR+1
+        sta SRC+1
+        lda SRC+1
+        cmp LEN+1
+        jnc lf_range_ret
+        jnz lf_read
+        lda SRC
+        cmp LEN
+        jnc lf_range_ret
+        jmp lf_read
+lf_range_ret:
+        lda #2
         sta HAVE
         rts
 lf_read:
@@ -496,9 +536,18 @@ cmd_l:  jsr skipsp
         jsr loadf
         lda HAVE
         jz l_nf
+        cmp #1
+        jnz l_range
         lda #<msg_ok
         sta PTR
         lda #>msg_ok
+        sta PTR+1
+        jsr puts
+        jmp mainloop
+l_range:
+        lda #<msg_range
+        sta PTR
+        lda #>msg_range
         sta PTR+1
         jsr puts
         jmp mainloop
@@ -524,6 +573,8 @@ cmd_s:  jsr skipsp
         sta LEN
         lda VAL+1
         sta LEN+1
+        jsr save_range
+        jz l_range
         jsr sendcmd
         lda LEN
         out #DISK
@@ -535,7 +586,7 @@ cmd_s:  jsr skipsp
         sta PTR+1
         lda LEN
         ora LEN+1
-        jz s_ok
+        jz s_wait
 s_l:    lda (PTR)
         out #DISK
         jsr incptr
@@ -543,12 +594,46 @@ s_l:    lda (PTR)
         lda LEN
         ora LEN+1
         jnz s_l
-s_ok:   lda #<msg_ok
+s_wait: jsr dskrd
+        cmp #1
+        jnz s_fail
+        lda #<msg_ok
         sta PTR
         lda #>msg_ok
         sta PTR+1
         jsr puts
         jmp mainloop
+s_fail: lda #<msg_save_fail
+        sta PTR
+        lda #>msg_save_fail
+        sta PTR+1
+        jsr puts
+        jmp mainloop
+
+save_range:
+        lda SRC+1
+        cmp #0x40
+        jc sr_bad
+        lda #0
+        sub SRC
+        sta PTR
+        lda #0x40
+        jc sr_high
+        sub #1
+sr_high:
+        sub SRC+1
+        sta PTR+1
+        lda PTR+1
+        cmp LEN+1
+        jnc sr_bad
+        jnz sr_ok
+        lda PTR
+        cmp LEN
+        jnc sr_bad
+sr_ok:  lda #1
+        rts
+sr_bad: lda #0
+        rts
 
 cmd_x:  jsr skipsp
         lda #68
@@ -743,11 +828,13 @@ incaptr:
         sta APTR+1
 ica_d:  rts
 
-banner:   .asciiz "MOS 1.1 - MSAP-2 8KB\nH FOR HELP\n"
-msg_help: .asciiz "A [AAAA]        ASSEMBLE (BARE ADDR MOVES, ; COMMENTS, EMPTY LINE ENDS)\nD AAAA          DUMP 32 BYTES\nE AAAA BB ..    ENTER BYTES\nR ADDR OR NAME  RUN - RTS EXITS AND PRINTS A/X\nL NAME [AAAA]   LOAD (DEFAULT 1000)\nS NAME AAAA NN  SAVE NN BYTES FROM AAAA\nX NAME          DELETE\nF               LIST FILES\nC               CLEAR SCREEN\nBRK IN CODE BREAKS BACK TO THE MONITOR\nPUTC 010 GETC 013 PUTS 016 GETLN 019 EXIT 01C\n"
+banner:   .asciiz "MOS 1.1 - MSAP-2 16KB\nH FOR HELP\n"
+msg_help: .asciiz "A [AAAA]        ASSEMBLE (BARE ADDR MOVES, ; COMMENTS, EMPTY LINE ENDS)\nD AAAA          DUMP 32 BYTES\nE AAAA BB ..    ENTER BYTES\nR ADDR OR NAME  RUN - RTS EXITS AND PRINTS A/X\nL NAME [AAAA]   LOAD (DEFAULT 2000)\nS NAME AAAA NN  SAVE NN BYTES FROM AAAA\nX NAME          DELETE\nF               LIST FILES\nC               CLEAR SCREEN\nBRK IN CODE BREAKS BACK TO THE MONITOR\nPUTC 010 GETC 013 PUTS 016 GETLN 019 EXIT 01C\n"
 msg_what: .asciiz "?\n"
 msg_ok:   .asciiz "OK\n"
 msg_nf:   .asciiz "NOT FOUND\n"
+msg_range: .asciiz "OUT OF RANGE\n"
+msg_save_fail: .asciiz "SAVE FAILED\n"
 msg_ra:   .asciiz " A="
 msg_rx:   .asciiz " X="
 msg_brk:  .asciiz "\nBRK @"
